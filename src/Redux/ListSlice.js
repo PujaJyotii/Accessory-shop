@@ -23,6 +23,26 @@ const ListSlice = createSlice({
         state.list[index] = { ...state.list[index], ...action.payload.obj };
       }
     },
+    edit(state, action) {
+      let index = state.list.findIndex(
+        (item) => item.nameP === action.payload.nameP
+      );
+      if (state.list[index].quantity > 1) {
+        state.list[index].quantity = state.list[index].quantity - 1;
+      } else {
+        state.list = state.list.filter(
+          (item) => item.nameP !== action.payload.nameP
+        );
+      }
+    },
+    increment(state, action) {
+      let index = state.list.findIndex(
+        (item) => item.nameP === action.payload.nameP
+      );
+      if (state.list[index].quantity !== -1) {
+        state.list[index].quantity = state.list[index].quantity + 1;
+      }
+    },
   },
 });
 

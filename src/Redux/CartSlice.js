@@ -30,6 +30,9 @@ const CartSlice = createSlice({
         };
       }
     },
+    get(state, action) {
+      state.cart = action.payload;
+    },
     decrease(state, action) {
       let index = state.cart.findIndex(
         (item) => item.nameP === action.payload.nameP

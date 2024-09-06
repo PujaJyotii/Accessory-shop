@@ -2,16 +2,168 @@ import { Button, Modal } from "react-bootstrap";
 import classes from "./Cart.module.css";
 import { useDispatch, useSelector } from "react-redux";
 import { cartAction } from "../Redux/CartSlice";
+import { listAction } from "../Redux/ListSlice";
 
 function Cart(props) {
   let CartP = useSelector((state) => state.cart.cart);
+  const ListP = useSelector((state) => state.list.list);
   let dispatch = useDispatch();
-  const decreaseHandler = (el) => {
-    dispatch(cartAction.decrease(el));
+  const decreaseHandler = async (el) => {
+    let index = CartP.findIndex((item) => item.nameP === el.nameP);
+    let Index = ListP.findIndex((item) => item.nameP === el.nameP);
+
+    try {
+      if (CartP[index].amount !== 1) {
+        let obj = {
+          ...CartP[index],
+          amount: CartP[index].amount - 1,
+        };
+        let resp = await fetch(
+          `https://petshop-10b84-default-rtdb.firebaseio.com/cart/${CartP[index].id}.json`,
+          {
+            method: "PUT",
+            body: JSON.stringify(obj),
+            secureToken: { "Content-Type": "application/json" },
+          }
+        );
+        if (!resp.ok) {
+          throw new Error(resp.status);
+        }
+        let data = await resp.json();
+        console.log(data);
+        dispatch(cartAction.decrease(el));
+      } else {
+        let resp = await fetch(
+          `https://petshop-10b84-default-rtdb.firebaseio.com/cart/${CartP[index].id}.json`,
+          {
+            method: "DELETE",
+
+            secureToken: { "Content-Type": "application/json" },
+          }
+        );
+        if (!resp.ok) {
+          throw new Error(resp.status);
+        }
+        let data = await resp.json();
+        console.log(data);
+        dispatch(cartAction.decrease(el));
+      }
+    } catch (error) {
+      console.log(error);
+    }
+
+    try {
+      if (Index !== -1) {
+        let obj = {
+          ...ListP[Index],
+          quantity: ListP[Index].quantity + 1,
+        };
+        let resp = await fetch(
+          `https://petshop-10b84-default-rtdb.firebaseio.com/Data/${ListP[Index].id}.json`,
+          {
+            method: "PUT",
+            body: JSON.stringify(obj),
+            secureToken: { "Content-Type": "application/json" },
+          }
+        );
+        if (!resp.ok) {
+          throw new Error(resp.status);
+        }
+        let data = await resp.json();
+        console.log(data);
+
+        dispatch(listAction.increment(el));
+      } else {
+        let obj = {
+          ...CartP[index],
+          quantity: 1,
+        };
+        let resp = await fetch(
+          `https://petshop-10b84-default-rtdb.firebaseio.com/Data.json`,
+          {
+            method: "POST",
+            body: JSON.stringify(obj),
+            secureToken: { "Content-Type": "application/json" },
+          }
+        );
+        if (!resp.ok) {
+          throw new Error(resp.status);
+        }
+        let data = await resp.json();
+        console.log(data);
+
+        dispatch(listAction.add({ ...el, quantity: 1, id: data.name }));
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const increaseHandler = (el) => {
-    dispatch(cartAction.increase(el));
+  const increaseHandler = async (el) => {
+    let index = CartP.findIndex((item) => item.nameP === el.nameP);
+    let Index = ListP.findIndex((item) => item.nameP === el.nameP);
+    try {
+      console.log(CartP[index].amount, +CartP[index].quantity);
+      if (+CartP[index].amount !== +CartP[index].quantity) {
+        let obj = {
+          ...CartP[index],
+          amount: CartP[index].amount + 1,
+        };
+        let resp = await fetch(
+          `https://petshop-10b84-default-rtdb.firebaseio.com/cart/${CartP[index].id}.json`,
+          {
+            method: "PUT",
+            body: JSON.stringify(obj),
+            secureToken: { "Content-Type": "application/json" },
+          }
+        );
+        if (!resp.ok) {
+          throw new Error(resp.status);
+        }
+        let data = await resp.json();
+        console.log(data);
+        dispatch(cartAction.increase(el));
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    try {
+      if (ListP[Index].quantity > 1) {
+        let obj = {
+          ...ListP[Index],
+          quantity: ListP[Index].quantity - 1,
+        };
+        let resp = await fetch(
+          `https://petshop-10b84-default-rtdb.firebaseio.com/Data/${ListP[Index].id}.json`,
+          {
+            method: "PUT",
+            body: JSON.stringify(obj),
+            secureToken: { "Content-Type": "application/json" },
+          }
+        );
+        if (!resp.ok) {
+          throw new Error(resp.status);
+        }
+        let data = await resp.json();
+        console.log(data);
+      } else {
+        let resp = await fetch(
+          `https://petshop-10b84-default-rtdb.firebaseio.com/Data/${ListP[Index].id}.json`,
+          {
+            method: "DELETE",
+            secureToken: { "Content-Type": "application/json" },
+          }
+        );
+        if (!resp.ok) {
+          throw new Error(resp.status);
+        }
+        let data = await resp.json();
+        console.log(data);
+      }
+      dispatch(listAction.edit(el));
+    } catch (error) {
+      console.log(error);
+    }
   };
   const totalA = CartP.reduce((total, item) => {
     return total + item.price * item.amount;
@@ -34,13 +186,16 @@ function Cart(props) {
                 <div>Rs.{el.price}</div>
               </div>
               <div className={classes.btns}>
-                <span
-                  className={classes.btn1}
-                  onClick={() => increaseHandler(el)}
-                >
-                  +
-                </span>
+                {+el.quantity !== +el.amount && (
+                  <span
+                    className={classes.btn1}
+                    onClick={() => increaseHandler(el)}
+                  >
+                    +
+                  </span>
+                )}
                 <span>x{el.amount}</span>
+
                 <span
                   className={classes.btn2}
                   onClick={() => decreaseHandler(el)}

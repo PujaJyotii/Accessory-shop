@@ -11,7 +11,7 @@ function GetData() {
   const [price, setPrice] = useState("");
   const [imageP, setImageP] = useState("");
   const [quantity, setQuantity] = useState("");
-
+  let CartP = useSelector((state) => state.cart.cart);
   let ListProduct = useSelector((state) => state.list.list);
   const dispatch = useDispatch();
   async function SubmitHandler(e) {
@@ -100,6 +100,24 @@ function GetData() {
     }
   };
 
+  useEffect(() => {
+    async function getData() {
+      let resp = await fetch(
+        "https://petshop-10b84-default-rtdb.firebaseio.com/cart.json"
+      );
+      let data = await resp.json();
+      let res = [];
+      for (let key in data) {
+        res.push({
+          ...data[key],
+          id: key,
+        });
+      }
+      dispatch(cartAction.get(res));
+    }
+    getData();
+  }, [dispatch]);
+
   const EditHandler = async (el) => {
     setNameP(el.nameP);
     setImageP(el.imageP);
@@ -173,8 +191,83 @@ function GetData() {
     setQuantity("");
   };
 
-  const AddHandler = (el) => {
-    dispatch(cartAction.addC({ ...el, amount: 1 }));
+  const AddHandler = async (el) => {
+    let index = CartP.findIndex((item) => item.nameP === el.nameP);
+    let Index = ListProduct.findIndex((item) => item.nameP === el.nameP);
+    try {
+      if (index === -1) {
+        let resp = await fetch(
+          "https://petshop-10b84-default-rtdb.firebaseio.com/cart.json",
+          {
+            method: "POST",
+            body: JSON.stringify(el),
+            secureToken: { "Content-Type": "application/json" },
+          }
+        );
+        if (!resp.ok) {
+          throw new Error(resp.status);
+        }
+        let data = await resp.json();
+        console.log(data);
+        dispatch(cartAction.addC({ ...el, amount: 1, id: data.name }));
+      } else {
+        let obj = { ...CartP[index], amount: CartP[index].amount + 1 };
+        let resp = await fetch(
+          `https://petshop-10b84-default-rtdb.firebaseio.com/cart/${CartP[index].id}.json`,
+          {
+            method: "PUT",
+            body: JSON.stringify(obj),
+            secureToken: { "Content-Type": "application/json" },
+          }
+        );
+        if (!resp.ok) {
+          throw new Error(resp.status);
+        }
+        let data = await resp.json();
+        console.log(data);
+        dispatch(cartAction.addC(el));
+      }
+    } catch (error) {
+      console.log(error);
+    }
+
+    try {
+      if (ListProduct[Index].quantity > 1) {
+        let obj = {
+          ...ListProduct[Index],
+          quantity: ListProduct[Index].quantity - 1,
+        };
+        let resp = await fetch(
+          `https://petshop-10b84-default-rtdb.firebaseio.com/Data/${ListProduct[Index].id}.json`,
+          {
+            method: "PUT",
+            body: JSON.stringify(obj),
+            secureToken: { "Content-Type": "application/json" },
+          }
+        );
+        if (!resp.ok) {
+          throw new Error(resp.status);
+        }
+        let data = await resp.json();
+        console.log(data);
+      } else {
+        let resp = await fetch(
+          `https://petshop-10b84-default-rtdb.firebaseio.com/Data/${ListProduct[Index].id}.json`,
+          {
+            method: "DELETE",
+            secureToken: { "Content-Type": "application/json" },
+          }
+        );
+        if (!resp.ok) {
+          throw new Error(resp.status);
+        }
+        let data = await resp.json();
+        console.log(data);
+      }
+      dispatch(listAction.edit(el));
+    } catch (error) {
+      console.log(error);
+    }
   };
   return (
     <>

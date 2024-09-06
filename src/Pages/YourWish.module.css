@@ -1,0 +1,6 @@
+.box {
+  margin: 20px auto;
+  max-width: 50%;
+  border: 1px solid black;
+  margin-top: 100px;
+}
